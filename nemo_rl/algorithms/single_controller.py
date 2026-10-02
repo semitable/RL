@@ -4343,6 +4343,35 @@ class SingleControllerActor:
             for instance_id, episodes in raw_inventory.items()
         }
 
+    async def _retire_dropped_gym_episodes(
+        self,
+        coordinator: GymCheckpointCoordinator,
+        checkpoint_id: str,
+    ) -> None:
+        """Retire episodes RL dropped while Gym may still be running them.
+
+        Abandoning or discarding a group leaves an admitted episode running in
+        Gym, which would export it at commit, outside the candidate set. Gym
+        accepts a retire only while idle, so this runs before prepare; a drop
+        recorded after it is retired by the next checkpoint.
+        """
+        ledger = self._rollout_recovery_ledger
+        raw = ledger.gym_checkpoint_retirements(coordinator.instance_ids)
+        if not any(raw.values()):
+            return
+        await coordinator.retire(
+            checkpoint_id,
+            {
+                instance_id: tuple(
+                    GymCheckpointEpisode(rollout_id, attempt)
+                    for rollout_id, attempt in episodes
+                )
+                for instance_id, episodes in raw.items()
+            },
+        )
+        # Only what was retired: a drop recorded meanwhile stays for next time.
+        ledger.mark_gym_retired(raw)
+
     async def _drain_non_exported_gym_candidates(
         self,
         coordinator: GymCheckpointCoordinator,
@@ -4454,6 +4483,9 @@ class SingleControllerActor:
             )
 
         async with gate.closed():
+            # Gym refuses a retire once a checkpoint is open, so retire while it
+            # is still idle; dispatch is already closed, so nothing new races in.
+            await self._retire_dropped_gym_episodes(coordinator, checkpoint_id)
             async with coordinator.prepared(checkpoint_id):
                 candidates = self._gym_checkpoint_inventory(coordinator)
                 commit = await coordinator.commit(
