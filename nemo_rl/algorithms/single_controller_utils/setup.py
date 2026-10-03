@@ -1726,12 +1726,6 @@ def setup_single_controller(
     colocated = generation_config["colocated"]["enabled"]
     segment_size = master_config.cluster.segment_size
 
-    # Claim constrained training nodes before unconstrained inference or Gym
-    # tasks can consume them. This matters when inference topology alignment
-    # falls back while the training cluster remains topology-constrained.
-    if not colocated and segment_size is not None:
-        train_cluster.get_placement_groups()
-
     # Claim teacher placement groups before deferred generation starts NeMo-Gym,
     # whose resource servers may otherwise opportunistically consume those GPUs.
     teacher_clusters: dict[str, RayVirtualCluster] = {}

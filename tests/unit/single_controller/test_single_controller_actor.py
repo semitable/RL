@@ -1405,6 +1405,7 @@ def test_opd_advantage_stage_pools_raw_gap_separately_under_tropd() -> None:
     ctrl._teacher_logprobs_required = True
     ctrl._is_ppo = False
     ctrl._dp_client = FakeDataPlane()
+    ctrl._train_data_dump = None
     ctrl._master_config = SimpleNamespace(
         grpo=GRPOConfig(seq_logprob_error_threshold=None)
     )
