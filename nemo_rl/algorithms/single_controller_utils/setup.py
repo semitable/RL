@@ -710,9 +710,9 @@ def _build_reference(
     config["generation"]["top_k"] = None
     config["generation"]["top_p"] = 1.0
     config["offload_optimizer_for_logprob"] = False
-    for key in ("draft", "router_replay"):
-        if config.get(key) is not None:
-            config[key]["enabled"] = False
+    config.pop("draft", None)
+    if config.get("router_replay") is not None:
+        config["router_replay"]["enabled"] = False
     config["dtensor_cfg"]["cpu_offload"] = False
     reference = TQPolicy(
         cluster=cluster,

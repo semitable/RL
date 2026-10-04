@@ -96,15 +96,20 @@ from nemo_rl.utils.config import (
 _REAL_BUILD_GENERATION = sc_setup_mod._build_generation
 
 
+@pytest.mark.parametrize("typed_draft", [False, True])
 def test_reference_loads_initial_weights_without_optimizer_or_second_reference(
     monkeypatch,
+    typed_draft,
 ) -> None:
+    from nemo_rl.models.policy.draft_config import Eagle3DraftConfig
+
+    draft = Eagle3DraftConfig(enabled=True) if typed_draft else {"enabled": True}
     config = _make_master_config()
     config.policy.update(
         {
             "model_name": "initial-checkpoint",
             "dtensor_cfg": {"cpu_offload": True},
-            "draft": {"enabled": True},
+            "draft": draft,
             "router_replay": {"enabled": True},
             "megatron_cfg": {"enabled": True, "tensor_model_parallel_size": 2},
         }
@@ -125,6 +130,12 @@ def test_reference_loads_initial_weights_without_optimizer_or_second_reference(
     assert frozen["generation"]["top_p"] == 1.0
     assert frozen["generation"]["temperature"] == 0.7
     assert frozen["dtensor_cfg"]["cpu_offload"] is False
+    assert "draft" not in frozen
+    assert frozen["router_replay"]["enabled"] is False
+    assert config.policy["router_replay"]["enabled"] is True
+    assert draft == (
+        Eagle3DraftConfig(enabled=True) if typed_draft else {"enabled": True}
+    )
     assert config.policy["generation"]["top_k"] == 10
     assert config.policy["dtensor_cfg"]["cpu_offload"] is True
 
@@ -690,18 +701,27 @@ def test_single_controller_token_capture_nightly_recipe_resolves_to_runtime_cont
 
 
 @pytest.mark.parametrize(
-    ("reference_policy_kl_penalty", "expected_init_reference_model"),
-    [(0.0, False), (0.01, True)],
+    (
+        "reference_policy_kl_penalty",
+        "separate_reference",
+        "expected_init_reference_model",
+    ),
+    [(0.0, False, False), (0.01, False, True), (0.01, True, False)],
 )
 def test_build_trainer_initializes_reference_model_only_for_nonzero_kl(
     reference_policy_kl_penalty: float,
+    separate_reference: bool,
     expected_init_reference_model: bool,
 ) -> None:
+    from nemo_rl.distributed.reference_placement import ReferencePlacementConfig
+
     master_config = _make_master_config(
         loss_cfg=ClippedPGLossConfig(
             reference_policy_kl_penalty=reference_policy_kl_penalty
         )
     )
+    if separate_reference:
+        master_config.reference = ReferencePlacementConfig(num_nodes=1, gpus_per_node=8)
 
     with patch.object(sc_setup_mod, "TQPolicy") as mock_policy:
         sc_setup_mod._build_trainer(
@@ -709,8 +729,8 @@ def test_build_trainer_initializes_reference_model_only_for_nonzero_kl(
             master_config,
             MagicMock(name="tokenizer"),
             None,
-            weights_path=None,
-            optimizer_path=None,
+            weights_path=Path("resumed-policy"),
+            optimizer_path=Path("resumed-optimizer"),
             checkpointing=True,
             reserved_http_server_ports={0: 5555, 2: 6666},
         )
@@ -720,6 +740,8 @@ def test_build_trainer_initializes_reference_model_only_for_nonzero_kl(
         is expected_init_reference_model
     )
     assert mock_policy.call_args.kwargs["checkpointing"] is True
+    assert mock_policy.call_args.kwargs["weights_path"] == Path("resumed-policy")
+    assert mock_policy.call_args.kwargs["optimizer_path"] == Path("resumed-optimizer")
     assert mock_policy.call_args.kwargs["reserved_http_server_ports"] == {
         0: 5555,
         2: 6666,
