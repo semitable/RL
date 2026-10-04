@@ -24,8 +24,8 @@ from __future__ import annotations
 import os
 import time
 import warnings
-from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
