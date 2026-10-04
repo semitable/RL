@@ -107,7 +107,7 @@ def test_cpu_inventory_exceeds_dashboard_limit_or_reports_failure(
             )
         ),
         nodes=lambda: [node("01", 1, {"nrl.nvidia.com/gpu-ids": "0"})],
-        get_runtime_context=lambda: SimpleNamespace(get_job_id=lambda: b"\x01"),
+        get_runtime_context=lambda: SimpleNamespace(get_job_id=lambda: "01"),
     )
     monkeypatch.setitem(sys.modules, "ray", fake_ray)
     cluster = SimpleNamespace(gpu_placement={"01": (0,)})

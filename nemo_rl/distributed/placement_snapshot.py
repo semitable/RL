@@ -128,7 +128,7 @@ def print_actor_placement(actor_args: Any, config: Any, **render_options: Any) -
             )
 
         actors = asyncio.run(query_actors())
-        current_job = ray.get_runtime_context().get_job_id().hex()
+        current_job = ray.get_runtime_context().get_job_id()
         actor_data = [
             {
                 "node_id": actor.node_id.hex(),
