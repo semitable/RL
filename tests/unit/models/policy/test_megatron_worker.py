@@ -3091,7 +3091,7 @@ def test_megatron_reference_policy_functionality(
     tiny_llama_model_path, separate_reference: bool
 ):
     """Test Megatron reference policy functionality."""
-    num_gpus = 2
+    num_gpus = 1 if separate_reference else 2
 
     cluster = RayVirtualCluster(
         name="test-reference",
