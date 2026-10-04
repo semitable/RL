@@ -78,8 +78,9 @@ def test_stale_device_inventory_and_missing_hosts_fail_explicitly():
 
 
 @pytest.mark.parametrize("failure", [False, True])
+@pytest.mark.parametrize("foreign", [False, True])
 def test_cpu_inventory_exceeds_dashboard_limit_or_reports_failure(
-    monkeypatch, capsys, failure
+    monkeypatch, capsys, failure, foreign
 ):
     from nemo_rl.distributed.placement_snapshot import print_actor_placement
 
@@ -89,7 +90,11 @@ def test_cpu_inventory_exceeds_dashboard_limit_or_reports_failure(
     else:
         query.return_value = {
             i: SimpleNamespace(
-                node_id=b"\x01", name="", class_name="Gym", required_resources={}
+                node_id=b"\x01",
+                job_id=b"\x02" if foreign else b"\x01",
+                name="",
+                class_name="Gym",
+                required_resources={},
             )
             for i in range(10_001)
         }
@@ -102,6 +107,7 @@ def test_cpu_inventory_exceeds_dashboard_limit_or_reports_failure(
             )
         ),
         nodes=lambda: [node("01", 1, {"nrl.nvidia.com/gpu-ids": "0"})],
+        get_runtime_context=lambda: SimpleNamespace(get_job_id=lambda: b"\x01"),
     )
     monkeypatch.setitem(sys.modules, "ray", fake_ray)
     cluster = SimpleNamespace(gpu_placement={"01": (0,)})
@@ -116,5 +122,6 @@ def test_cpu_inventory_exceeds_dashboard_limit_or_reports_failure(
     print_actor_placement(args, config)
     output = capsys.readouterr().out
     assert "P+G" in output
-    assert ("inventory unavailable" if failure else "Gym x10001") in output
+    expected = "Gym [job=02] x10001" if foreign else "Gym x10001"
+    assert ("inventory unavailable" if failure else expected) in output
     query.assert_awaited_once_with(actor_state_name="ALIVE", timeout=30)

@@ -128,10 +128,16 @@ def print_actor_placement(actor_args: Any, config: Any, **render_options: Any) -
             )
 
         actors = asyncio.run(query_actors())
+        current_job = ray.get_runtime_context().get_job_id().hex()
         actor_data = [
             {
                 "node_id": actor.node_id.hex(),
-                "name": actor.name,
+                "name": (actor.name or actor.class_name)
+                + (
+                    f" [job={actor.job_id.hex()}]"
+                    if actor.job_id.hex() != current_job
+                    else ""
+                ),
                 "class_name": actor.class_name,
                 "required_resources": dict(actor.required_resources),
             }

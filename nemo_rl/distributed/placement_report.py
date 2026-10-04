@@ -106,6 +106,7 @@ def render_placement(
         "Roles: P=policy, R=reference, G=generation, V=critic, Tn=teacher",
         "Cells: +=roles share a GPU, .=unused advertised GPU, blank=not advertised",
         "GPU IDs are host-local. Host ranges are inclusive and describe identical rows.",
+        "CPU actors include all Ray jobs; [job=ID] marks actors from another job.",
         line(header),
         "| " + " | ".join("-" * width for width in widths) + " |",
         *(line(row) for row in rows[1:]),
