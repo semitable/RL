@@ -123,7 +123,6 @@ def print_actor_placement(actor_args: Any, config: Any, **render_options: Any) -
         async def query_actors() -> dict[Any, Any]:
             # The dashboard State API caps both query stages at 10,000 actors.
             return await ray._private.worker.global_worker.gcs_client.async_get_all_actor_info(
-                job_id=ray.JobID.from_hex(ray.get_runtime_context().get_job_id()),
                 actor_state_name="ALIVE",
                 timeout=30,
             )

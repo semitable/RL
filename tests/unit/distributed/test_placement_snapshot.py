@@ -101,8 +101,6 @@ def test_cpu_inventory_exceeds_dashboard_limit_or_reports_failure(
                 )
             )
         ),
-        JobID=SimpleNamespace(from_hex=lambda value: value),
-        get_runtime_context=lambda: SimpleNamespace(get_job_id=lambda: "job-id"),
         nodes=lambda: [node("01", 1, {"nrl.nvidia.com/gpu-ids": "0"})],
     )
     monkeypatch.setitem(sys.modules, "ray", fake_ray)
@@ -119,6 +117,4 @@ def test_cpu_inventory_exceeds_dashboard_limit_or_reports_failure(
     output = capsys.readouterr().out
     assert "P+G" in output
     assert ("inventory unavailable" if failure else "Gym x10001") in output
-    query.assert_awaited_once_with(
-        job_id="job-id", actor_state_name="ALIVE", timeout=30
-    )
+    query.assert_awaited_once_with(actor_state_name="ALIVE", timeout=30)
