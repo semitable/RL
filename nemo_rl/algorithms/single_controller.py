@@ -416,6 +416,7 @@ class SingleControllerActor:
                         for index in generation_workers.dp_leader_worker_indices
                     )
                 checkpoint_workers.extend(actor_args.finalizer_actors)
+                checkpoint_workers.extend(actor_args.storage_units)
                 # Reuse existing actor RPCs. This actor's local store is handled
                 # directly: __init__ cannot service an RPC back to itself.
                 configure_checkpoint_workers(checkpoint_workers)
