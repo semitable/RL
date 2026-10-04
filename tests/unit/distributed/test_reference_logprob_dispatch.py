@@ -8,7 +8,10 @@ from types import SimpleNamespace
 
 
 def test_resident_reference_writes_reference_column_using_only_its_own_model():
-    source = Path("nemo_rl/data_plane/worker_mixin.py").read_text()
+    source_path = (
+        Path(__file__).resolve().parents[3] / "nemo_rl/data_plane/worker_mixin.py"
+    )
+    source = source_path.read_text()
     tree = ast.parse(source)
     method = next(
         node
@@ -28,7 +31,7 @@ def test_resident_reference_writes_reference_column_using_only_its_own_model():
     )
     ast.fix_missing_locations(module)
     scope = {}
-    exec(compile(module, "nemo_rl/data_plane/worker_mixin.py", "exec"), scope)
+    exec(compile(module, str(source_path), "exec"), scope)
     writes = []
 
     def forbidden(*args, **kwargs):
